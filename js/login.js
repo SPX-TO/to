@@ -13,20 +13,52 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    message.textContent = "";
+
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
-    const { error } = await db.auth.signInWithPassword({
+    // 🔐 Login
+    const { error: loginError } = await db.auth.signInWithPassword({
       email,
       password
     });
 
-    if (error) {
+    if (loginError) {
       message.textContent = "Email ou senha inválidos.";
       return;
     }
 
-    // 🔥 AGORA REDIRECIONA PARA ADMIN
-    window.location.href = "admin.html";
+    // ✅ Pegar sessão consolidada
+    const { data: { session }, error: sessionError } = await db.auth.getSession();
+
+    if (sessionError || !session) {
+      message.textContent = "Erro ao obter sessão.";
+      return;
+    }
+
+    const user = session.user;
+
+    // 🔎 Buscar perfil do usuário
+    const { data: perfil, error: perfilError } = await db
+      .from("usuarios_perfis")
+      .select("tipo, esteira_id")
+      .eq("id", user.id)
+      .single();
+
+    if (perfilError || !perfil) {
+      message.textContent = "Perfil não configurado.";
+      return;
+    }
+
+    // 🚀 Redirecionamento por tipo
+    if (perfil.tipo === "admin") {
+      window.location.href = "admin.html";
+    } else if (perfil.tipo === "esteira") {
+      window.location.href = "admin.html";
+    } else {
+      message.textContent = "Tipo de usuário inválido.";
+    }
+
   });
 });

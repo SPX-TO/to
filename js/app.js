@@ -11,10 +11,10 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // INIT
 // ================================
 document.addEventListener("DOMContentLoaded", async () => {
+
 const banner = document.getElementById("updateBanner");
 const closeBanner = document.getElementById("closeBanner");
 
-// Mostrar sempre (para testar)
 banner.style.display = "block";
 document.body.classList.add("banner-active");
 
@@ -22,102 +22,176 @@ closeBanner.addEventListener("click", () => {
   banner.style.display = "none";
   document.body.classList.remove("banner-active");
 });
-  const resultadoCard = document.getElementById("resultadoCard");
-  const searchInput = document.getElementById("searchInput");
-  const resultsContainer = document.getElementById("results");
 
-  let debounceTimeout;
+const resultadoCard = document.getElementById("resultadoCard");
+const searchInput = document.getElementById("searchInput");
+const resultsContainer = document.getElementById("results");
 
-  // 🔠 FORÇAR CAIXA ALTA
-  searchInput.addEventListener("input", () => {
-    searchInput.value = searchInput.value.toUpperCase();
+let debounceTimeout;
 
-    clearTimeout(debounceTimeout);
+// 🔠 FORÇAR CAIXA ALTA
+searchInput.addEventListener("input", () => {
 
-    debounceTimeout = setTimeout(() => {
-      buscar(searchInput.value.trim());
-    }, 300);
-  });
+searchInput.value = searchInput.value.toUpperCase();
+
+clearTimeout(debounceTimeout);
+
+debounceTimeout = setTimeout(() => {
+buscar(searchInput.value.trim());
+}, 300);
+
+});
+
 if (!localStorage.getItem("favoritoAtualizado")) {
-  alert("ATENÇÃO: Atualize seu favorito para esta nova versão.");
-  localStorage.setItem("favoritoAtualizado", "true");
+alert("ATENÇÃO: Atualize seu favorito para esta nova versão.");
+localStorage.setItem("favoritoAtualizado", "true");
 }
-  // ================================
-  // 🔎 FUNÇÃO DE BUSCA
-  // ================================
-  async function buscar(termo) {
 
-    if (!termo) {
-      resultsContainer.innerHTML = "";
-      return;
-    }
-// 🔎 Registrar busca
+// ================================
+// 🔎 FUNÇÃO DE BUSCA
+// ================================
+async function buscar(termo) {
+
+if (!termo) {
+resultsContainer.innerHTML = "";
+return;
+}
+
+// registrar busca
 await db.from("search_logs").insert([{ termo }]);
-    const { data, error } = await db
-      .from("tos")
+
+const { data, error } = await db
+.from("tos")
 .select("*")
 .or(`and(codigo.ilike.%${termo}%,deleted_at.is.null),and(cidade.ilike.%${termo}%,deleted_at.is.null),and(estado.ilike.%${termo}%,deleted_at.is.null),and(tipo.ilike.%${termo}%,deleted_at.is.null)`)
 .order("cidade", { ascending: true });
 
-    if (error) {
-      console.error("Erro na busca:", error);
-      return;
-    }
+if (error) {
+console.error("Erro na busca:", error);
+return;
+}
 
-    renderizarResultados(data);
-  }
+renderizarResultados(data);
 
-  // ================================
-  // 🎨 RENDER RESULTADOS
-  // ================================
-  function renderizarResultados(lista) {
+}
 
-    resultsContainer.innerHTML = "";
-    resultadoCard.style.display = "none";
+// ================================
+// 🎨 RENDER RESULTADOS
+// ================================
+function renderizarResultados(lista) {
 
-    if (!lista || lista.length === 0) {
-      return;
-    }
-    resultadoCard.style.display = "block";
-    lista.forEach(to => {
+resultsContainer.innerHTML = "";
+resultadoCard.style.display = "none";
 
-      const card = document.createElement("div");
-      card.classList.add("resultado-card");
+if (!lista || lista.length === 0) {
+return;
+}
+
+resultadoCard.style.display = "block";
+
+lista.forEach(to => {
+
+const card = document.createElement("div");
+card.classList.add("resultado-card");
 
 card.innerHTML = `
-  <span class="badge ${to.tipo}">${to.tipo}</span>
+<span class="badge ${to.tipo}">${to.tipo}</span>
 
-  <span class="resultado-cidade">${to.cidade}</span>
+<span class="resultado-cidade">${to.cidade}</span>
 
-  <button class="copy-btn" data-copy="${to.cidade}">
-    <i class="bi bi-clipboard"></i>
-  </button>
+<button class="copy-btn" data-copy="${to.cidade}">
+<i class="bi bi-clipboard"></i>
+</button>
 
-  <span class="separador">|</span>
+<span class="separador">|</span>
 
-  <span class="resultado-codigo">${to.codigo}</span>
+<span class="resultado-codigo">${to.codigo}</span>
 
-  <button class="copy-btn" data-copy="${to.codigo}">
-    <i class="bi bi-clipboard"></i>
-  </button>
+<button class="copy-btn" data-copy="${to.codigo}">
+<i class="bi bi-clipboard"></i>
+</button>
 `;
 
-      resultsContainer.appendChild(card);
-    });
+resultsContainer.appendChild(card);
 
-    ativarCopiar();
-  }
+});
 
-  // ================================
-  // 📋 COPIAR CÓDIGO
-  // ================================
-  function ativarCopiar() {
-    document.querySelectorAll(".copy-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const texto = btn.getAttribute("data-copy");
-        navigator.clipboard.writeText(texto);
-      });
-    });
-  }
+ativarCopiar();
+
+}
+
+// ================================
+// 📋 COPIAR
+// ================================
+function ativarCopiar() {
+
+document.querySelectorAll(".copy-btn").forEach(btn => {
+
+btn.addEventListener("click", () => {
+
+const texto = btn.getAttribute("data-copy");
+navigator.clipboard.writeText(texto);
+
+});
+
+});
+
+}
+
+// ================================
+// 💬 MODAL FEEDBACK
+// ================================
+
+const abrirFeedback = document.getElementById("abrirFeedback");
+const modalFeedback = document.getElementById("modalFeedback");
+const fecharFeedback = document.getElementById("fecharFeedback");
+const enviarFeedback = document.getElementById("enviarFeedback");
+
+const fbNome = document.getElementById("fbNome");
+const fbWhatsapp = document.getElementById("fbWhatsapp");
+const fbEmail = document.getElementById("fbEmail");
+const fbMensagem = document.getElementById("fbMensagem");
+const fbObrigado = document.getElementById("fbObrigado");
+
+// abrir
+abrirFeedback.onclick = () => {
+modalFeedback.style.display = "flex";
+};
+
+// fechar
+fecharFeedback.onclick = () => {
+modalFeedback.style.display = "none";
+};
+
+// enviar
+enviarFeedback.onclick = async () => {
+
+if (!fbMensagem.value.trim()) {
+alert("Digite uma mensagem.");
+return;
+}
+
+await db.from("feedback_busca").insert([{
+nome: fbNome.value,
+whatsapp: fbWhatsapp.value,
+email: fbEmail.value,
+mensagem: fbMensagem.value
+}]);
+
+fbObrigado.style.display = "block";
+
+// limpar campos
+fbNome.value = "";
+fbWhatsapp.value = "";
+fbEmail.value = "";
+fbMensagem.value = "";
+
+// fechar após 2 segundos
+setTimeout(() => {
+modalFeedback.style.display = "none";
+fbObrigado.style.display = "none";
+}, 2000);
+
+};
 
 });
