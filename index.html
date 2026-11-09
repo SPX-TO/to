@@ -1,0 +1,300 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sistema de TO - Shopee</title>
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .topbar {
+            width: 100%;
+            height: 58px;
+            background: #ee4d2d;
+            display: flex;
+            align-items: center;
+            padding: 0 25px;
+        }
+
+        .logo {
+            color: #ffffff;
+            font-size: 25px;
+            font-weight: bold;
+            letter-spacing: -1px;
+        }
+
+        .container {
+            min-height: calc(100vh - 58px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 25px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333333;
+            font-size: 25px;
+            margin-bottom: 12px;
+        }
+
+        .message {
+            color: #666666;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .date {
+            color: #999999;
+            font-size: 13px;
+            margin-bottom: 25px;
+        }
+
+        .counter {
+            color: #444444;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .like-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            padding: 12px 28px;
+            border: none;
+            border-radius: 6px;
+            background: #0866ff;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .like-button:hover {
+            background: #0755d4;
+        }
+
+        .like-button:disabled {
+            opacity: 0.7;
+            cursor: wait;
+        }
+
+        .like-button i {
+            font-size: 19px;
+        }
+
+        .feedback {
+            margin-top: 14px;
+            font-size: 13px;
+            color: #555555;
+            min-height: 18px;
+            max-width: 450px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 21px;
+            }
+
+            .message,
+            .counter {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="topbar">
+        <div class="logo">Shopee</div>
+    </header>
+
+    <main class="container">
+
+        <h1>Opa! Esse sistema de TOs foi descontinuado.</h1>
+
+        <p class="message">
+            Se você gostava dele, deixe um like!
+        </p>
+
+        <p class="date">
+            Encerrado em 09/11/2026
+        </p>
+
+        <p class="counter" id="counter">
+            Carregando curtidas...
+        </p>
+
+        <button class="like-button" id="likeButton">
+            <i class="bi bi-hand-thumbs-up-fill"></i>
+            Curtir
+        </button>
+
+        <p class="feedback" id="feedback"></p>
+
+    </main>
+
+    <script>
+
+        // =====================================
+        // CONFIGURAÇÃO SUPABASE
+        // =====================================
+
+        const SUPABASE_URL =
+            'https://lheqsngyllranmhvthsl.supabase.co';
+
+        const SUPABASE_KEY =
+            'sb_publishable_SDCbRlv4UEOG8YRwiPUh5A_vAXyrpUa';
+
+        const supabaseClient = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_KEY
+        );
+
+
+        // =====================================
+        // ATUALIZAR CONTADOR GLOBAL
+        // Soma likes reais e automáticos
+        // =====================================
+
+        async function updateCounter() {
+
+            const counter = document.getElementById('counter');
+
+            const { data, error } = await supabaseClient
+                .from('to_likes')
+                .select('quantidade');
+
+            if (error) {
+
+                counter.textContent =
+                    'Curtidas indisponíveis no momento.';
+
+                console.error('Erro ao consultar likes:', error);
+
+                return;
+            }
+
+            const totalLikes = data.reduce(
+                (total, like) => total + like.quantidade,
+                0
+            );
+
+            counter.textContent =
+                `${totalLikes} curtidas, que tal curtir também?`;
+        }
+
+
+        // =====================================
+        // REGISTRAR LIKE
+        // Intervalo de 15 segundos
+        // =====================================
+
+        async function registerLike() {
+
+            const button = document.getElementById('likeButton');
+            const feedback = document.getElementById('feedback');
+
+            if (button.disabled) return;
+
+            const COOLDOWN = 15000;
+            const STORAGE_KEY = 'to_like_last_click';
+
+            const lastClick = Number(
+                localStorage.getItem(STORAGE_KEY) || 0
+            );
+
+            const now = Date.now();
+
+            // Verifica intervalo entre curtidas
+
+            if (now - lastClick < COOLDOWN) {
+
+                feedback.textContent =
+                    'Opa! Você já deixou seu like. Aguarde 15 segundinhos para curtir novamente. Obrigado pelo carinho!';
+
+                return;
+            }
+
+            button.disabled = true;
+
+            feedback.textContent = 'Registrando...';
+
+            // Registra uma curtida genuína
+
+            const { error } = await supabaseClient
+                .from('to_likes')
+                .insert({
+                    tipo: 'real',
+                    quantidade: 1
+                });
+
+            if (error) {
+
+                feedback.textContent =
+                    'Não foi possível registrar. Tente novamente.';
+
+                console.error('Erro ao registrar like:', error);
+
+            } else {
+
+                // Salva horário do último like
+
+                localStorage.setItem(
+                    STORAGE_KEY,
+                    Date.now()
+                );
+
+                feedback.textContent =
+                    'Obrigado pelo carinho!';
+
+                await updateCounter();
+            }
+
+            button.disabled = false;
+        }
+
+
+        // =====================================
+        // INICIALIZAÇÃO
+        // =====================================
+
+        document.getElementById('likeButton')
+            .addEventListener('click', registerLike);
+
+        // Carrega contador inicial
+        updateCounter();
+
+        // Atualiza a cada 15 segundos
+        setInterval(updateCounter, 15000);
+
+    </script>
+
+</body>
+</html>
